@@ -89,6 +89,9 @@ async function viewInformationMenu(){
 
 function displayInfo(arg_error, arg_response, arg_fields){
     if(arg_error){ console.log(arg_error); }
-    
+
+    // Valid fields to display
+    //let t_fields = arg_fields.filter(arg_element => acceptedFields.includes(arg_element));
+
     tableRenderer(arg_response, arg_fields);
 }
