@@ -577,17 +577,3 @@ async function updateObject(arg_category){
 async function deleteObject(arg_category){
 
 }
-
-
-
-// ==============================================================================
-// INITIALIZE DATA METHODS
-// ==============================================================================
-
-function convertToDisplayString(arg_string){
-
-}
-
-function convertToDBString(arg_string){
-
-}
