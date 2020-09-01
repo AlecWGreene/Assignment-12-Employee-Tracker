@@ -681,12 +681,101 @@ const objectQuestions = {
 
                         return false;
                     }}],
-        employee: [{type: "list", name: "id", message: "Which department would you like to update?", prefix: "", choices: ["PLACEHOLDER"], filter: function(arg_input){ return arg_input.match(/\d+(?=\s--)/g); }},
-                   {type: "checkbox", name:"features", message: "Which features would you like to update?", prefix: "", choices: ["Title", "Budget", "Department Head"]},
-                   {type: "input", name: "name", message: "", prefix: "", filter: ()=>{}, when: ()=>{}},
-                   {type: "number", name: "department_id", message: "", prefix: "", filter: ()=>{}, when: ()=>{}},
-                   {type: "number", name: "role_id", message: "", prefix: "", filter: ()=>{}, when: ()=>{}},
-                   {type: "number", name: "manager_id", message: "", prefix: "", filter: ()=>{}, when: ()=>{}}],
+        employee: [{type: "list", name: "id", message: "Which employee would you like to update?", prefix: "", choices: function(){
+                            return new Promise( arg_resolve => {
+                                queryDB("SELECT id, first_name, last_name FROM employee_table").then(arg_response => {
+                                    arg_resolve(arg_response.map(arg_value => arg_value.id + " -- " + arg_value.first_name +" "+arg_value.last_name));
+                                });
+                            });
+                        }, filter: function(arg_input){ return arg_input.match(/\d+(?=\s--)/g); }},
+                   {type: "checkbox", name: "features", message: "Which features would you like to update?", prefix: "", choices: ["Name", "Department", "Role", "Manager"], filter: function(arg_input){
+                            return arg_input.map(arg_value => {  
+                                switch(arg_value){
+                                    case "Name":
+                                        return "name";
+                                    case "Department":
+                                        return "department_id";
+                                    case "Role":
+                                        return "role_id";
+                                    case "Manager":
+                                        return "manager_id";
+                                }
+                            });
+                        }},
+                   {type: "input", name: "name", message: "Update the employee's name using the format Firstname Lastname: ", prefix: "", filter: function(arg_input){
+                            return arg_input;
+                        }, when: function(arg_hash){
+                            if(arg_hash.features.includes("name")){
+                                return true;
+                            }
+                            else{
+                                return false;
+                            }
+                        }},
+                   {type: "list", name: "department_id", message: "Select a department to assign the employee to: ", prefix: "", filter: function(arg_input){
+                            return arg_input.match(/\d+(?=\s--)/g);
+                        }, choices: function(arg_hash){
+                            return new Promise( arg_resolve => {
+                                queryDB("SELECT id, name FROM department_table WHERE NOT id = (SELECT department_id FROM employee_table WHERE id = " + arg_hash.id + ");").then(arg_response => {
+                                    arg_resolve(arg_response.map(arg_value => arg_value.id + " -- " + arg_value.name));
+                                });
+                            });
+                        }, when: function(arg_hash){
+                            if(arg_hash.features.includes("department_id")){
+                                return true;
+                            }
+                            else{
+                                return false;
+                            }
+                        }},
+                   {type: "list", name: "role_id", message: "", prefix: "", filter: function(arg_input){
+                            return arg_input.match(/\d+(?=\s--)/g);
+                        }, choices: function(arg_hash){
+                            return new Promise( arg_resolve => {
+                                queryDB("SELECT id, title FROM role_table WHERE NOT id = (SELECT role_id FROM employee_table WHERE id = " + arg_hash.id + ");").then(arg_response => {
+                                    arg_resolve(arg_response.map(arg_value => arg_value.id + " -- " + arg_value.title));
+                                });
+                            });
+                        }, when: function(arg_hash){
+                            if(arg_hash.features.includes("role_id")){
+                                return true;
+                            }
+                            else{
+                                return false;
+                            }
+                        }},
+                   {type: "list", name: "manager_id", message: "Select a manager for the employee: ", prefix: "", filter: function(arg_input){
+                            return arg_input.match(/\d+(?=\s--)/g);
+                        }, choices: function(arg_hash){
+                            return new Promise( arg_resolve => {
+                                // Find the deparment id
+                                let t_deparmentId;
+                                queryDB(`(SELECT department_id FROM employee_table WHERE id = ${arg_hash.id})`).then( arg_response2 => {
+                                    if(arg_hash.features.includes("department_id")){
+                                        t_deparmentId = arg_hash.department_id;
+                                    }
+                                    else{
+                                        t_deparmentId = arg_response2;
+                                    }
+
+                                    // Get possible managers
+                                    queryDB("SELECT id, first_name, last_name FROM employee_table WHERE department_id = " + t_deparmentId + ";").then(arg_response => {
+                                        let t_array = arg_response.map(arg_value => arg_value.id + " -- " + arg_value.first_name + " " + arg_value.last_name);
+                                        if(t_array == undefined || t_array.length === 0){
+                                            t_array = ["No Valid Managers Found"];
+                                        }
+                                        arg_resolve(t_array);
+                                    });
+                                });
+                            });
+                        }, when: function(arg_hash){
+                            if(arg_hash.features.includes("manager_id")){
+                                return true;
+                            }
+                            else{
+                                return false;
+                            }
+                        }}],
         role: [{type: "list", name: "id", message: "Which department would you like to update?", prefix: "", choices: ["PLACEHOLDER"], filter: function(arg_input){ return arg_input.match(/\d+(?=\s--)/g); }},
                {type: "checkbox", name:"features", message: "Which features would you like to update?", prefix: "", choices: ["Title", "Budget", "Department Head"]},
                {type: "input", name: "title", message: "", prefix: "", filter: ()=>{}, when: ()=>{}},
@@ -764,18 +853,26 @@ async function updateObject(arg_category){
         t_input = await prompt(t_questions.department);
         break;
     case "employee":
-        
+        t_input = await prompt(t_questions.employee);
         break;
     case "role":
+        
         break;
     }
 
     // Generate update query
     let t_query = "UPDATE " + arg_category + "_table SET ";
     for(let t_feature of t_input.features){
-        t_query += t_feature + " = " + (t_stringFields.includes(t_feature) ? "\"" + t_input[t_feature] + "\""  : t_input[t_feature]) + ", ";
+        // Split up employee names into 2 parts
+        if(arg_category === "employee" && t_feature === "name"){
+            let t_data = t_input[t_feature].split(" ");
+            t_query += `first_name = "${t_data[0]}", last_name = "${t_data[1]}", `;
+        }
+        else{
+            t_query += t_feature + " = " + (t_stringFields.includes(t_feature) ? "\"" + t_input[t_feature] + "\""  : t_input[t_feature]) + ", ";
+        }
     }
-    t_query += ` WHERE department_id = ${t_input.id};`;
+    t_query += ` WHERE id = ${t_input.id};`;
     t_query = t_query.replace(/\,\s(?=\sWHERE)/g, "");
     console.log(t_query);
 }
