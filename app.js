@@ -609,6 +609,96 @@ const objectQuestions = {
                    {type: "list", name: "manager_id", message: "Who is the employee's manager?", prefix: "", choices: ["PLACEHOLDER"], filter: function(arg_input){ return arg_input.match(/\d+(?=\s--)/g); }}],
         role: [{type: "input", name: "title", message: "Enter the role's title: ", prefix: ""},
                {type: "number", name: "salary", message: "Assign a salary to the role: ", prefix: ""}]
+    },
+
+    // Prompts to select an item and feature for update
+    update: { 
+        department: [{type: "list", name: "id", message: "Which department would you like to update?", prefix: "", filter: function(arg_input){
+                            return arg_input.match(/\d+(?=\s--)/g);
+                        }, choices: function(){ // Question -- which department to update?
+                            return new Promise( (arg_resolve, arg_reject) => {
+                                queryDB("SELECT id, name FROM department_table;").then(arg_response => {
+                                    arg_resolve(arg_response.map(arg_value => arg_value.id +" -- "+arg_value.name));
+                                });
+                            });
+                        }, filter: function(arg_input){ return arg_input.match(/\d+(?=\s--)/g); }},
+                     {type: "checkbox", name:"features", message: "Which features would you like to update?", prefix: "", filter: function(arg_input){ // Question -- select features to update
+                            return arg_input.map(arg_value => { 
+                                switch(arg_value){
+                                    case "Name":
+                                        return "name";
+                                    case "Budget":
+                                        return "budget";
+                                    case "Department Head":
+                                        return "head_id";
+                                }
+                            });
+                        }, choices: ["Name", "Budget", "Department Head"]},
+                     {type: "input", name: "name", message: "Update the department name: ", prefix: "", filter: function(arg_input){ // Question -- enter new department name
+                        return arg_input.toLowerCase().replace(/\b\w/g, arg_char => arg_char.toUpperCase());
+                     }, when: function(arg_input){
+                         if(arg_input.features.includes("name")){
+                            return true;
+                         }
+
+                         return false;
+                     }},
+                     {type: "number", name: "budget", message: "Assign a new budget to the department: ", prefix: "", validate: function(arg_input){ // Question -- give department a budget
+                         if(arg_input === 0){
+                            return "Cannot designate a department's budget as zero";
+                         }
+                         else if(arg_input < 0){
+                            return "Budget cannot be a negative number";
+                         }
+                         else{
+                            return true;
+                         }
+                     }, when: function(arg_input){
+                        if(arg_input.features.includes("budget")){
+                           return true;
+                        }
+
+                        return false;
+                    }},
+                     {type: "list", name: "head_id", message: "Select a new head of the department:", prefix: "", choices: function(arg_hash){ // Question -- Select new head of the department
+                         return new Promise((arg_resolve, arg_reject) => {
+                             queryDB(`SELECT id, first_name, last_name FROM employee_table WHERE department_id = ${arg_hash.id};`).then( arg_response => {
+                                if(arg_response.length === 0){
+                                    queryDB("SELECT id, first_name, last_name FROM employee_table;").then(arg_response2 => arg_resolve(arg_response2.map(arg_value => arg_value.id + " -- " + arg_value.first_name + " " + arg_value.last_name)));
+                                }
+                                else{
+                                    // Else return the list of employees from the department
+                                    arg_resolve(arg_response.map(arg_value => arg_value.id + " -- " + arg_value.first_name + " " + arg_value.last_name));
+                                }
+                             }); 
+                         }); 
+                     }, filter: function(arg_input){
+                        return arg_input.match(/\d+(?=\s--)/g);
+                     }, when: function(arg_input){
+                        if(arg_input.features.includes("head_id")){
+                           return true;
+                        }
+
+                        return false;
+                    }}],
+        employee: [{type: "list", name: "id", message: "Which department would you like to update?", prefix: "", choices: ["PLACEHOLDER"], filter: function(arg_input){ return arg_input.match(/\d+(?=\s--)/g); }},
+                   {type: "checkbox", name:"features", message: "Which features would you like to update?", prefix: "", choices: ["Title", "Budget", "Department Head"]},
+                   {type: "input", name: "name", message: "", prefix: "", filter: ()=>{}, when: ()=>{}},
+                   {type: "number", name: "department_id", message: "", prefix: "", filter: ()=>{}, when: ()=>{}},
+                   {type: "number", name: "role_id", message: "", prefix: "", filter: ()=>{}, when: ()=>{}},
+                   {type: "number", name: "manager_id", message: "", prefix: "", filter: ()=>{}, when: ()=>{}}],
+        role: [{type: "list", name: "id", message: "Which department would you like to update?", prefix: "", choices: ["PLACEHOLDER"], filter: function(arg_input){ return arg_input.match(/\d+(?=\s--)/g); }},
+               {type: "checkbox", name:"features", message: "Which features would you like to update?", prefix: "", choices: ["Title", "Budget", "Department Head"]},
+               {type: "input", name: "title", message: "", prefix: "", filter: ()=>{}, when: ()=>{}},
+               {type: "number", name: "budget", message: "", prefix: "", filter: ()=>{}, when: ()=>{}},
+               {type: "number", name: "head_id", message: "", prefix: "", filter: ()=>{}, when: ()=>{}}]
+     },
+    
+    // Promptes to select an item for deletion
+    delete: {
+        department: [],
+        employee: [],
+        role: []
     }
 }
 
@@ -664,7 +754,30 @@ async function addObject(arg_category){
 }
 
 async function updateObject(arg_category){
+    let t_questions = objectQuestions.update;
+    let t_stringFields = ["name", "title", "first_name", "last_name"];
 
+    // Retrieve object information through prmopts
+    let t_input;
+    switch(arg_category){
+    case "department":
+        t_input = await prompt(t_questions.department);
+        break;
+    case "employee":
+        
+        break;
+    case "role":
+        break;
+    }
+
+    // Generate update query
+    let t_query = "UPDATE " + arg_category + "_table SET ";
+    for(let t_feature of t_input.features){
+        t_query += t_feature + " = " + (t_stringFields.includes(t_feature) ? "\"" + t_input[t_feature] + "\""  : t_input[t_feature]) + ", ";
+    }
+    t_query += ` WHERE department_id = ${t_input.id};`;
+    t_query = t_query.replace(/\,\s(?=\sWHERE)/g, "");
+    console.log(t_query);
 }
 
 async function deleteObject(arg_category){
