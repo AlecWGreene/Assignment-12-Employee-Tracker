@@ -17,7 +17,7 @@ colors.setTheme({
     tableNames: ["brightCyan", "bold"],
     tableRowBG: []
 });
-const employeeColumns = ["manager_id"];
+const employeeColumns = ["manager_id", "head_id"];
 
 
 /** Encapsulates inquirer prompt */
@@ -593,9 +593,25 @@ async function updateTableMenu(arg_table){
 
 // OBJECT MUTATION 
 // ----------------------------------------------------------------------------
+let objectQuestions = {
+    add: {
+        department: [{type: "input", name: "name", message: "Give the department a name: ", prefix: ""},
+                     {type: "number", name: "budget", message: "Assign a budget to the new department: ", prefix: ""},
+                     {type: "list", name: "head_id", message: "Assign a department head: ", prefix: "", choices: ["PLACEHOLDER"]}],
+        employee: [{type: "input", name: "name", message: "Enter the employee's name: ", prefix: ""},
+                   {type: "list", name: "department_id", message: "Which department does this employee work in?", prefix: "", choices: ["PLACEHOLDER"]},
+                   {type: "list", name: "role_id", message: "What role does the employee perform?", prefix: "", choices: ["PLACEHOLDER"]},
+                   {type: "list", name: "manager_id", message: "Who is the employee's manager?", prefix: "", choices: ["PLACEHOLDER"]}],
+        role: [{type: "input", name: "title", message: "Enter the role's title: ", prefix: ""},
+               {type: "number", name: "salary", message: "Assign a salary to the role: ", prefix: ""}]
+    }
+}
 
 async function addObject(arg_category){
+    let t_questions = objectQuestions.add[arg_category];
 
+    // Get object information
+    let t_info = await prompt(t_questions);
 }
 
 async function updateObject(arg_category){
