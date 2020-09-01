@@ -515,31 +515,37 @@ function displaySearchQuery(arg_query){
 // ==============================================================================
 async function updateMenu(){
 
-    // Get user input
-    let t_input = await prompt({
-        type: "list",
-        name: "choice",
-        message: "Which category would you like to update?",
-        choices: ["Departments", "Employees", "Roles", "Return to Main Menu"],
-        prefix: ""
-    });
-
     // Initialize helper variables
     let t_running = true;
 
-    // Handle user selection
-    switch(t_input.choice){
-        case "Deparments":
-        case "Employees":
-        case "Roles":
-        case "Return to Main Menu":
-            t_running = false;
-            break;
-    }
-
     // While user is updating information
     while(t_running){
+        console.clear();
 
+        // Get user input on category selection
+        let t_input = await prompt({
+            type: "list",
+            name: "choice",
+            message: "Which category would you like to update?",
+            choices: ["Departments", "Employees", "Roles", "Return to Main Menu"],
+            prefix: ""
+        });
+
+        // Handle user selection
+        switch(t_input.choice){
+            case "Departments":
+                await updateTableMenu("department");
+                break;
+            case "Employees":
+                await updateTableMenu("employee");
+                break;
+            case "Roles":
+                await updateTableMenu("role");
+                break;
+            case "Return to Main Menu":
+                t_running = false;
+                break;
+        }
     }
 }
 
@@ -547,20 +553,42 @@ async function updateMenu(){
 // CATEGORY NAVIGATION
 // ----------------------------------------------------------------------------
 
-async function actionMenu(){
+async function updateTableMenu(arg_table){
+    console.clear();
 
-}
+    let t_running = true;
 
-async function departmentMenu(){
+    while(t_running){
 
-}
+        // Display current departments
+        let t_data = await queryDB(`SELECT * FROM ${arg_table}_table`);
+        let t_message = await displayTable(t_data, `${arg_table}_table`);
 
-async function employeeMenu(){
+        // Get user input on category selection
+        let t_input = await prompt({
+            type: "list",
+            name: "choice",
+            message: t_message + "How would you like to modify this data?",
+            choices: ["Create New Entry", "Update Existing Entry", "Delete Existing Entry", "Select a Different Category"],
+            prefix: ""
+        });
 
-}
-
-async function roleMenu(){
-
+        // Handle user selection
+        switch(t_input.choice){
+            case "Create New Entry":
+                await addObject(arg_table);
+                break;
+            case "Update Existing Entry":
+                await updateObject(arg_table);
+                break;
+            case "Delete Existing Entry":
+                await deleteObject(arg_table);
+                break;
+            case "Select a Different Category":
+                t_running = false;
+                break;
+        }
+    }
 }
 
 // OBJECT MUTATION 
@@ -577,3 +605,5 @@ async function updateObject(arg_category){
 async function deleteObject(arg_category){
 
 }
+
+
