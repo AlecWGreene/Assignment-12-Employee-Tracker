@@ -170,7 +170,11 @@ async function viewInformationMenu(){
             
             // Clear console and display information
             console.clear();
-            t_message = await displayTable(t_info, t_breadcrumbs);
+            if(process.env.DEBUG){ /** @todo Interrogate max on how to do this */
+                console.table(t_info);
+                console.table(t_breadcrumbs);
+            }
+            t_message = await displayTable(t_info, t_breadcrumbs[0]);
         }
 
         // If the user is deciding what table to view
@@ -419,10 +423,9 @@ async function displayTable(arg_data, arg_tableName){
     }
 
     // Replace references in data
-    //let t_data = arg_data;
     let t_data = await updateDataIds(arg_data, t_refs);    
 
-    // Console log the data
+    // Return log the data
     return tableRenderer(t_data);
 }
 
@@ -593,15 +596,17 @@ async function updateTableMenu(arg_table){
 
 // OBJECT MUTATION 
 // ----------------------------------------------------------------------------
-let objectQuestions = {
+/** Templates to use for dynamic prompt generation */
+const objectQuestions = {
+    // Prompts for creation methods
     add: {
         department: [{type: "input", name: "name", message: "Give the department a name: ", prefix: ""},
                      {type: "number", name: "budget", message: "Assign a budget to the new department: ", prefix: ""},
-                     {type: "list", name: "head_id", message: "Assign a department head: ", prefix: "", choices: ["PLACEHOLDER"]}],
+                     {type: "list", name: "head_id", message: "Assign a department head: ", prefix: "", choices: ["PLACEHOLDER"], filter: function(arg_input){ return arg_input.match(/\d+(?=\s--)/g); }}],
         employee: [{type: "input", name: "name", message: "Enter the employee's name: ", prefix: ""},
                    {type: "list", name: "department_id", message: "Which department does this employee work in?", prefix: "", choices: ["PLACEHOLDER"]},
                    {type: "list", name: "role_id", message: "What role does the employee perform?", prefix: "", choices: ["PLACEHOLDER"]},
-                   {type: "list", name: "manager_id", message: "Who is the employee's manager?", prefix: "", choices: ["PLACEHOLDER"]}],
+                   {type: "list", name: "manager_id", message: "Who is the employee's manager?", prefix: "", choices: ["PLACEHOLDER"], filter: function(arg_input){ return arg_input.match(/\d+(?=\s--)/g); }}],
         role: [{type: "input", name: "title", message: "Enter the role's title: ", prefix: ""},
                {type: "number", name: "salary", message: "Assign a salary to the role: ", prefix: ""}]
     }
@@ -610,8 +615,52 @@ let objectQuestions = {
 async function addObject(arg_category){
     let t_questions = objectQuestions.add[arg_category];
 
+    switch(arg_category){
+        case "department":
+            // Get valid list of candidates for department heads
+            let t_query = await queryDB("SELECT id, first_name, last_name FROM employee_table WHERE (id) NOT IN (SELECT head_id FROM department_table);");
+            t_questions[2].choices = t_query.map( arg_value => arg_value.id + " -- " + arg_value.first_name + " " + arg_value.last_name );
+            t_questions[2].choices.push("Leave Empty");
+            break;
+        case "employee":
+            // Get valid list of departments
+            let t_data = await queryDB("SELECT id, name FROM department_table");
+            t_questions[1].choices = t_data.map( arg_value => arg_value.name);
+            t_questions[1].choices.push("Leave Empty");
+
+            // Get valid list of roles
+            t_data = await queryDB("SELECT id, title FROM role_table");
+            t_questions[2].choices = t_data.map( arg_value => arg_value.title);
+            t_questions[2].choices.push("Leave Empty");
+
+            // Get employees to select as manager
+            t_data = await queryDB("SELECT id, first_name, last_name FROM employee_table;");
+            t_questions[3].choices = t_data.map( arg_value => arg_value.id + " -- " + arg_value.first_name + " " + arg_value.last_name );
+            t_questions[3].choices.push("Leave Empty");
+            break;
+        case "role":
+            break;
+    }
+
     // Get object information
     let t_info = await prompt(t_questions);
+    
+    // Insert a new row into the relevant table
+    let t_query = `INSERT INTO ${arg_category}` ;
+    let t_columns = "(", t_values = " VALUES (";
+    for(let t_key of Object.keys(t_info)){
+        t_columns += t_key + ", ";
+        t_values += t_info[t_key] + ", ";
+    }
+
+    // Format the strings
+    t_columns = t_columns.replace(/,\s$/g,""); t_values = t_values.replace(/,\s$/g, "");
+    t_columns += ")"; t_values += ");";
+    t_query += t_columns + t_values;
+    
+    // Perform the query
+    console.log(t_query);
+    // await queryDB(t_query);
 }
 
 async function updateObject(arg_category){

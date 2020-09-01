@@ -7,6 +7,7 @@ CREATE TABLE department_table(
 id INT auto_increment,
 `name` VARCHAR(255),
 budget DECIMAL,
+head_id INT,
 PRIMARY KEY(id)
 );
 
@@ -26,3 +27,10 @@ manager_id INT,
 CONSTRAINT department_label FOREIGN KEY(department_id) REFERENCES department_table(id) ON UPDATE CASCADE ON DELETE SET NULL,
 CONSTRAINT role_label FOREIGN KEY(role_id) REFERENCES role_table(id) ON UPDATE CASCADE ON DELETE SET NULL
 );
+
+ALTER TABLE department_table
+ADD CONSTRAINT employee_label 
+FOREIGN KEY(head_id) 
+REFERENCES employee_table(id) 
+ON UPDATE CASCADE 
+ON DELETE SET NULL;
