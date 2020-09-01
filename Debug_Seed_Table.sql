@@ -4,14 +4,6 @@ USE employee_tracker_db;
 INSERT INTO department_table (`name`) VALUES ("Mathematics"), ("Physics"), ("Biology"), ("Chemistry"), ("Computer Science"), ("Mechanical Engineering"), ("Electrical Engineering");
 
 -- Add default roles --
-ALTER TABLE role_table
-ADD COLUMN mathematics BOOL AFTER salary,
-ADD COLUMN physics BOOL AFTER mathematics,
-ADD COLUMN biology BOOL AFTER physics,
-ADD COLUMN chemistry BOOL AFTER biology,
-ADD COLUMN computer_science BOOL AFTER chemistry,
-ADD COLUMN mechanical_engineering BOOL AFTER computer_science,
-ADD COLUMN electrical_engineering BOOL AFTER mechanical_engineering;
 INSERT INTO role_table (title, salary) VALUES 
 ("Department Head", 150000.00), 
 ("Professor", 110000.00), 

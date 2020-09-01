@@ -13,6 +13,17 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "cli-table3": "^0.6.0",
+    "colors": "^1.4.0",
     "jest": "^26.4.2"
-  }
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AlecWGreene/Assignment-12-Employee-Tracker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AlecWGreene/Assignment-12-Employee-Tracker/issues"
+  },
+  "homepage": "https://github.com/AlecWGreene/Assignment-12-Employee-Tracker#readme"
 }

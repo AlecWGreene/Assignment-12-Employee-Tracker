@@ -6,6 +6,7 @@ USE employee_tracker_db;
 CREATE TABLE department_table(
 id INT auto_increment,
 `name` VARCHAR(255),
+budget DECIMAL,
 PRIMARY KEY(id)
 );
 
@@ -21,5 +22,7 @@ first_name VARCHAR(30),
 last_name VARCHAR(30),
 department_id INT,
 role_id INT,
-manager_id INT
+manager_id INT,
+CONSTRAINT department_label FOREIGN KEY(department_id) REFERENCES department_table(id) ON UPDATE CASCADE ON DELETE SET NULL,
+CONSTRAINT role_label FOREIGN KEY(role_id) REFERENCES role_table(id) ON UPDATE CASCADE ON DELETE SET NULL
 );

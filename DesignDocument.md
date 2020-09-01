@@ -45,18 +45,52 @@ id first_name, last_name, department_id, role_id, manager_id
 
 # Code outline
 
-> init
-    > app()
-    > *while* not exit 
+> app()
+    > *while* not exit
         > prompt(Main Menu)
-            > case: "View Information"
-                > loadData(default_query)
-                > *while* not return_to_menu
-                    > prompt(Filter or Sort)
+            > case: "View Information" COMPLETED
+                > loadData(default_query) COMPLETED
+                > *while* not return_to_menu COMPLETED
+                    > prompt(alter view) COMPLETED
+                        > case: "Filter" COMPLETED
+                        > case: "Sort" COMPLETED
+                        > case: "Select Columns" COMPLETED
+                        > case: "Join additional table" TODO
+                        > case: "View different table" COMPLETED
+                        > case: "Return to Main Menu" COMPLETED
                     > loadData(new_query)
-            > case: "Update Information"
+            > case: "Update Information" TODO
                 > *while* not return_to_menu
-                    > prompt(Table)
-                    > displayData(table)
-                    > prompt(ADD or UPDATE or DELETE)
-            > case: exit
+                    > prompt(data to update) 
+                        > case "Departments":
+                        > case "Roles":
+                        > case "Employees":
+            > case: "Initiate Database" 
+            > case: "Exit"
+
+TODO
+- Create a larger test DB
+- Implement update methods
+    - Create templates for db info
+    - outline menus
+- Add validation to make filter only work for number rows
+
+Departments
+> id int (PRIMARY KEY)
+> name string 
+> budget decimal
+
+Roles
+> id int (PRIMARY KEY)
+> name string
+> salary decimal
+
+Employee
+> id int
+> first_name string
+> last_name string
+> deparment_id int
+> role_id int (FOREIGN KEY)
+> manager_id int (FOREIGN KEY)
+
+
