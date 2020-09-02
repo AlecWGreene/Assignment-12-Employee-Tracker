@@ -15,7 +15,8 @@ colors.setTheme({
     tableId: ["brightWhite", "bold"],
     tableMoney: ["green"],
     tableNames: ["brightCyan", "bold"],
-    tableRowBG: []
+    tableRowBG: [],
+    deleteText: ["red"]
 });
 const employeeColumns = ["manager_id", "head_id"];
 
@@ -613,7 +614,7 @@ const objectQuestions = {
 
     // Prompts to select an item and feature for update
     update: { 
-        department: [{type: "list", name: "id", message: "Which department would you like to update?", prefix: "", filter: function(arg_input){
+        department: [{type: "list", name: "id", message: "Which department would you like to update?", prefix: "", filter: function(arg_input){ // Question -- select a department to update
                             return arg_input.match(/\d+(?=\s--)/g);
                         }, choices: function(){ // Question -- which department to update?
                             return new Promise( (arg_resolve, arg_reject) => {
@@ -681,14 +682,14 @@ const objectQuestions = {
 
                         return false;
                     }}],
-        employee: [{type: "list", name: "id", message: "Which employee would you like to update?", prefix: "", choices: function(){
+        employee: [{type: "list", name: "id", message: "Which employee would you like to update?", prefix: "", choices: function(){ // Question -- select an employee
                             return new Promise( arg_resolve => {
                                 queryDB("SELECT id, first_name, last_name FROM employee_table").then(arg_response => {
                                     arg_resolve(arg_response.map(arg_value => arg_value.id + " -- " + arg_value.first_name +" "+arg_value.last_name));
                                 });
                             });
                         }, filter: function(arg_input){ return arg_input.match(/\d+(?=\s--)/g); }},
-                   {type: "checkbox", name: "features", message: "Which features would you like to update?", prefix: "", choices: ["Name", "Department", "Role", "Manager"], filter: function(arg_input){
+                   {type: "checkbox", name: "features", message: "Which features would you like to update?", prefix: "", choices: ["Name", "Department", "Role", "Manager"], filter: function(arg_input){ // Question -- select featrues to update
                             return arg_input.map(arg_value => {  
                                 switch(arg_value){
                                     case "Name":
@@ -702,7 +703,7 @@ const objectQuestions = {
                                 }
                             });
                         }},
-                   {type: "input", name: "name", message: "Update the employee's name using the format Firstname Lastname: ", prefix: "", filter: function(arg_input){
+                   {type: "input", name: "name", message: "Update the employee's name using the format Firstname Lastname: ", prefix: "", filter: function(arg_input){ // Question -- select a name for the employee
                             return arg_input;
                         }, when: function(arg_hash){
                             if(arg_hash.features.includes("name")){
@@ -712,7 +713,7 @@ const objectQuestions = {
                                 return false;
                             }
                         }},
-                   {type: "list", name: "department_id", message: "Select a department to assign the employee to: ", prefix: "", filter: function(arg_input){
+                   {type: "list", name: "department_id", message: "Select a department to assign the employee to: ", prefix: "", filter: function(arg_input){ // Question -- select a department_id
                             return arg_input.match(/\d+(?=\s--)/g);
                         }, choices: function(arg_hash){
                             return new Promise( arg_resolve => {
@@ -728,11 +729,11 @@ const objectQuestions = {
                                 return false;
                             }
                         }},
-                   {type: "list", name: "role_id", message: "", prefix: "", filter: function(arg_input){
+                   {type: "list", name: "role_id", message: "", prefix: "", filter: function(arg_input){ // Question -- select a role_id
                             return arg_input.match(/\d+(?=\s--)/g);
                         }, choices: function(arg_hash){
                             return new Promise( arg_resolve => {
-                                queryDB("SELECT id, title FROM role_table WHERE NOT id = (SELECT role_id FROM employee_table WHERE id = " + arg_hash.id + ");").then(arg_response => {
+                                queryDB("SELECT id, title FROM role_table WHERE NOT id = (SELECT role_id FROM employee_table WHERE id = " + arg_hash.id + ");").then(arg_response => { 
                                     arg_resolve(arg_response.map(arg_value => arg_value.id + " -- " + arg_value.title));
                                 });
                             });
@@ -744,7 +745,7 @@ const objectQuestions = {
                                 return false;
                             }
                         }},
-                   {type: "list", name: "manager_id", message: "Select a manager for the employee: ", prefix: "", filter: function(arg_input){
+                   {type: "list", name: "manager_id", message: "Select a manager for the employee: ", prefix: "", filter: function(arg_input){ // Question -- select a manager_id
                             return arg_input.match(/\d+(?=\s--)/g);
                         }, choices: function(arg_hash){
                             return new Promise( arg_resolve => {
@@ -776,18 +777,102 @@ const objectQuestions = {
                                 return false;
                             }
                         }}],
-        role: [{type: "list", name: "id", message: "Which department would you like to update?", prefix: "", choices: ["PLACEHOLDER"], filter: function(arg_input){ return arg_input.match(/\d+(?=\s--)/g); }},
-               {type: "checkbox", name:"features", message: "Which features would you like to update?", prefix: "", choices: ["Title", "Budget", "Department Head"]},
-               {type: "input", name: "title", message: "", prefix: "", filter: ()=>{}, when: ()=>{}},
-               {type: "number", name: "budget", message: "", prefix: "", filter: ()=>{}, when: ()=>{}},
-               {type: "number", name: "head_id", message: "", prefix: "", filter: ()=>{}, when: ()=>{}}]
+        role: [{type: "list", name: "id", message: "Which role would you like to update?", prefix: "", choices: function(arg_hash){ // Question -- select role to update
+                        return new Promise(arg_resolve => {
+                            queryDB("SELECT id, title FROM role_table;").then(arg_response => {
+                                arg_resolve(arg_response.map(arg_value => arg_value.id + " -- " + arg_value.title));
+                            });
+                        });
+                    }, filter: function(arg_input){ return arg_input.match(/\d+(?=\s--)/g); }},
+                    {type: "checkbox", name: "features", message: "Which features would you like to update?", prefix: "", choices: ["Title", "Salary"], filter: function(arg_input){ // Question -- select features to update
+                        return arg_input.map(arg_value => {  
+                            switch(arg_value){
+                                case "Title":
+                                    return "title";
+                                case "Salary":
+                                    return "salary";
+                            }
+                        });
+                    }},
+               {type: "input", name: "title", message: "Update the role's designation: ", prefix: "", filter: function(arg_input){ // Question -- update role's title
+                        return arg_input;
+                    }, when: function(arg_hash){
+                        if(arg_hash.features.includes("title")){
+                            return true;
+                        }
+                        else{
+                            return false;
+                        }
+                    }},
+               {type: "number", name: "salary", message: "Assign a salary to the position", prefix: "", filter: function(arg_input){ // Question -- update role's salary
+                        return arg_input;
+                    }, when: function(arg_hash){
+                        if(arg_hash.features.includes("salary")){
+                            return true;
+                        }
+                        else{
+                            return false;
+                        }
+                    }}]
      },
     
     // Promptes to select an item for deletion
     delete: {
-        department: [],
-        employee: [],
-        role: []
+        department: [{type: "list", name: "id", message: "Which department would you like to update?", prefix: "", filter: function(arg_input){ // Question -- select a department to delete
+                            return arg_input.match(/\d+(?=\s--)/g);
+                        }, choices: function(){ 
+                            return new Promise( (arg_resolve, arg_reject) => {
+                                queryDB("SELECT id, name FROM department_table;").then(arg_response => {
+                                    arg_resolve(arg_response.map(arg_value => arg_value.id +" -- "+arg_value.name));
+                                });
+                            });
+                        }, filter: function(arg_input){ return arg_input.match(/\d+(?=\s--)/g); }},
+                    {type: "confirm", name: "confirmation", prefix: "", message: function(arg_hash){
+                            return new Promise(arg_resolve => {
+                                queryDB("SELECT * FROM department_table WHERE id = " + arg_hash.id + ";").then(arg_response => {
+                                    let t_string = "Name: " + arg_response[0].name.deleteText + "\n Budget: " + arg_response[0].budget.toString().deleteText + "\n Department Head: " + arg_response[0].head_id.toString().deleteText + "\n";
+                                    arg_resolve(t_string + "Would you like to delete this department?");
+                                });
+                            });
+                        }
+                    }],
+        employee: [{type: "list", name: "id", message: "Which employee would you like to delete?", prefix: "", filter: function(arg_input){ // Question -- select a department to delete
+                            return arg_input.match(/\d+(?=\s--)/g);
+                        }, choices: function(){ 
+                            return new Promise( (arg_resolve, arg_reject) => {
+                                queryDB("SELECT id, first_name, last_name FROM employee_table;").then(arg_response => {
+                                    arg_resolve(arg_response.map(arg_value => arg_value.id +" -- "+arg_value.first_name +" "+arg_value.last_name));
+                                });
+                            });
+                        }, filter: function(arg_input){ return arg_input.match(/\d+(?=\s--)/g); }},
+                    {type: "confirm", name: "confirmation", prefix: "", message: function(arg_hash){
+                            return new Promise(arg_resolve => {
+                                queryDB("SELECT * FROM employee_table WHERE id = " + arg_hash.id + ";").then(arg_response => {
+                                    let t_string = "Name: " + arg_response[0].first_name.deleteText + " " + arg_response[0].last_name.deleteText + "\n Department: " + arg_response[0].department_id.toString().deleteText + "\n Role: " + arg_response[0].role_id.toString().deleteText + "\n Manager: " + arg_response[0].manager_id.toString().deleteText + "\n";
+                                    arg_resolve(t_string + "Would you like to delete this employee?");
+                                });
+                            });
+                        }
+                    }],
+        //let t_string = "Name: " + arg_response.first_name + " " + arg_response.last_name + " Department Id: " + arg_response.department_id + " Role Id: " + arg_response.role_id + " Manager Id: " + arg_response.manager_id + "\n";
+        role: [{type: "list", name: "id", message: "Which role would you like to delete?", prefix: "", filter: function(arg_input){ // Question -- select a department to delete
+                            return arg_input.match(/\d+(?=\s--)/g);
+                        }, choices: function(){ 
+                            return new Promise( (arg_resolve, arg_reject) => {
+                                queryDB("SELECT id, title FROM role_table;").then(arg_response => {
+                                    arg_resolve(arg_response.map(arg_value => arg_value.id +" -- "+arg_value.title));
+                                });
+                            });
+                        }, filter: function(arg_input){ return arg_input.match(/\d+(?=\s--)/g); }},
+                    {type: "confirm", name: "confirmation", prefix: "", message: function(arg_hash){
+                            return new Promise(arg_resolve => {
+                                queryDB("SELECT * FROM role_table WHERE id = " + arg_hash.id + ";").then(arg_response => {
+                                    let t_string = "Title: " + arg_response[0].title.deleteText + "\n Salary: " + arg_response[0].salary.toString().deleteText  + "\n";
+                                    arg_resolve(t_string + "Would you like to delete this role?");
+                                });
+                            });
+                        }
+                    }]
     }
 }
 
@@ -825,11 +910,11 @@ async function addObject(arg_category){
     let t_info = await prompt(t_questions);
     
     // Insert a new row into the relevant table
-    let t_query = `INSERT INTO ${arg_category}` ;
+    let t_query = `INSERT INTO ${arg_category}_table` ;
     let t_columns = "(", t_values = " VALUES (";
     for(let t_key of Object.keys(t_info)){
         t_columns += t_key + ", ";
-        t_values += t_info[t_key] + ", ";
+        t_values += processInputForQuery(t_info[t_key], t_key) + ", ";
     }
 
     // Format the strings
@@ -839,12 +924,11 @@ async function addObject(arg_category){
     
     // Perform the query
     console.log(t_query);
-    // await queryDB(t_query);
+    await queryDB(t_query);
 }
 
 async function updateObject(arg_category){
     let t_questions = objectQuestions.update;
-    let t_stringFields = ["name", "title", "first_name", "last_name"];
 
     // Retrieve object information through prmopts
     let t_input;
@@ -856,7 +940,7 @@ async function updateObject(arg_category){
         t_input = await prompt(t_questions.employee);
         break;
     case "role":
-        
+        t_input = await prompt(t_questions.role);
         break;
     }
 
@@ -869,16 +953,43 @@ async function updateObject(arg_category){
             t_query += `first_name = "${t_data[0]}", last_name = "${t_data[1]}", `;
         }
         else{
-            t_query += t_feature + " = " + (t_stringFields.includes(t_feature) ? "\"" + t_input[t_feature] + "\""  : t_input[t_feature]) + ", ";
+            t_query += t_feature + " = " + processInputForQuery(t_input[t_feature], t_feature) + ", ";
         }
     }
     t_query += ` WHERE id = ${t_input.id};`;
     t_query = t_query.replace(/\,\s(?=\sWHERE)/g, "");
     console.log(t_query);
+    await queryDB(t_query);
 }
 
 async function deleteObject(arg_category){
+    let t_questions = objectQuestions.delete;
 
+    // Retrieve object information through prmopts
+    let t_input;
+    switch(arg_category){
+    case "department":
+        t_input = await prompt(t_questions.department);
+        break;
+    case "employee":
+        t_input = await prompt(t_questions.employee);
+        break;
+    case "role":
+        t_input = await prompt(t_questions.role);
+        break;
+    }
+
+    // Generate update query
+    let t_query = "DELETE FROM " + arg_category + "_table WHERE id = " + t_input.id + ";";
+    console.log(t_query);
+    await queryDB(t_query);
 }
 
+function processInputForQuery(arg_value, arg_field){
+    let t_stringFields = ["name", "title", "first_name", "last_name"];
+    if(t_stringFields.includes(arg_field)){
+        return "\"" + arg_value + "\"";
+    }
+    return arg_value;
+}
 

@@ -1,7 +1,7 @@
 USE employee_tracker_db;
 
 -- Add Default Departments --
-INSERT INTO department_table (`name`) VALUES ("Mathematics"), ("Physics"), ("Biology"), ("Chemistry"), ("Computer Science"), ("Mechanical Engineering"), ("Electrical Engineering");
+INSERT INTO department_table (`name`, `budget`) VALUES ("Mathematics", 150000), ("Physics", 200000), ("Biology", 190000), ("Chemistry", 175000), ("Computer Science", 100000), ("Mechanical Engineering", 175000), ("Electrical Engineering", 175000);
 
 -- Add default roles --
 INSERT INTO role_table (title, salary) VALUES 
