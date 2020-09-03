@@ -19,6 +19,7 @@ colors.setTheme({
     deleteText: ["red"]
 });
 const employeeColumns = ["manager_id", "head_id"];
+let databaseIssues = [];
 
 
 /** Encapsulates inquirer prompt */
@@ -554,6 +555,7 @@ async function updateMenu(){
 }
 
 
+
 // CATEGORY NAVIGATION
 // ----------------------------------------------------------------------------
 
@@ -594,6 +596,8 @@ async function updateTableMenu(arg_table){
         }
     }
 }
+
+
 
 // OBJECT MUTATION 
 // ----------------------------------------------------------------------------
@@ -923,7 +927,6 @@ async function addObject(arg_category){
     t_query += t_columns + t_values;
     
     // Perform the query
-    console.log(t_query);
     await queryDB(t_query);
 }
 
@@ -958,7 +961,7 @@ async function updateObject(arg_category){
     }
     t_query += ` WHERE id = ${t_input.id};`;
     t_query = t_query.replace(/\,\s(?=\sWHERE)/g, "");
-    console.log(t_query);
+
     await queryDB(t_query);
 }
 
@@ -981,7 +984,7 @@ async function deleteObject(arg_category){
 
     // Generate update query
     let t_query = "DELETE FROM " + arg_category + "_table WHERE id = " + t_input.id + ";";
-    console.log(t_query);
+
     await queryDB(t_query);
 }
 
@@ -993,3 +996,17 @@ function processInputForQuery(arg_value, arg_field){
     return arg_value;
 }
 
+
+
+// DATABASE ISSUE HANDLING
+// -----------------------------------------------------------------------------
+
+/** Rules for updateDatabaseIssues to check against the database */
+const databaseRules = [
+
+];
+
+/**  */
+async function updateDatabaseIssues(){
+
+}
