@@ -94,3 +94,28 @@ Employee
 > manager_id int (FOREIGN KEY)
 
 
+Examples 
+*Gaia Sanctuary*
+- Departments
+    - Wild Cats
+    - Canines
+    - Avians
+    - Reptiles
+    - Equines
+    - Aquatic
+    - Corporate
+    - Gift Shop
+- Roles
+    - Director, 110000
+    - Finance Manager, 70000
+    - Gift Shop Manager, 60000
+    - Curator, 90000
+    --------------------
+    - Veternarian, 80000
+    - Zoologist, 70000
+    - Caretaker, 70000
+    - Gift Shop Clerk, 45000
+    - Ticket Attendant, 44000
+    - Volunteer Coordinator, 60000
+
+Employees

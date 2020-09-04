@@ -16,7 +16,8 @@ colors.setTheme({
     tableMoney: ["green"],
     tableNames: ["brightCyan", "bold"],
     tableRowBG: [],
-    deleteText: ["red"]
+    deleteText: ["red"],
+    warningText: ["yellow", "bold"]
 });
 const employeeColumns = ["manager_id", "head_id"];
 let databaseIssues = [];
@@ -44,7 +45,7 @@ let queryDB;
 connection.connect(() => {
     console.log("Connected to " + connection.threadId);
 
-    // Promisfy 
+    // Promisfy connection.query
     queryDB = util.promisify(connection.query).bind(connection);
 
     // Call main method
@@ -71,7 +72,7 @@ async function mainMenu(){
             name: "selection",
             message: "What would you like to do?",
             prefix: "",
-            choices: ["View Information", "Update Information", "Setup Database", "Exit"],
+            choices: ["View Information", "Update Information", "Validate Database", "Exit"],
         });
 
         // Handle user choice
@@ -82,8 +83,16 @@ async function mainMenu(){
             case "Update Information":
                 await updateMenu();
                 break;
-            case "Setup Database":
-                break;
+            case "Validate Database":
+                console.log(await updateDatabaseIssues());
+                await prompt({
+                    type: "confirm",
+                    name: "choice",
+                    message: "Press any key to continue...",
+                    prefix: ""
+                });
+                mainMenu();
+                return;
             case "Exit":
                 t_running = false;
                 break;
@@ -157,6 +166,11 @@ async function viewInformationMenu(){
                     }
                 }
 
+                // Group criteria
+                if(t_breadcrumbs[1]["Groups"] && t_breadcrumbs[1]["Groups"].length > 0){
+                    t_query += " GROUP BY "     
+                }
+
                 // Sort critera
                 if(t_breadcrumbs[1]["sort"] && t_breadcrumbs[1]["sort"] != {}){
                     t_query += ` ORDER BY ${t_breadcrumbs[1]["sort"].column} ${t_breadcrumbs[1]["sort"].direction}`;
@@ -213,12 +227,16 @@ async function viewInformationMenu(){
                 t_breadcrumbs[1] = {}
             }
             
+            // List of choices for the user
+            let t_choices = ["Filter Rows",  "Search Rows", "Sort Columns", "Select Visible Columns", "Select a Different Table"];
+
             // Get user input on method
+            console.log(t_message);
             let t_view = await prompt({
                 type: "list",
                 name: "method",
-                message: t_message + "How would you like to alter this view?",
-                choices: ["Filter Rows", "Sort Columns", "Search Rows", "Select Visible Columns", "Select a Different Table"],
+                message: "How would you like to alter this view?",
+                choices: t_choices,
                 prefix: ""
             });
 
@@ -228,7 +246,7 @@ async function viewInformationMenu(){
                     if(!t_breadcrumbs[1].filters){ t_breadcrumbs[1].filters = []; }
                     t_breadcrumbs[1].filters.push(await filterMenu(t_breadcrumbs[0]));
                     if(t_breadcrumbs[1].filters.find( (arg_value) => arg_value.column == "Revert")){
-                        t_breadcrumbs[1].filters = []
+                        t_breadcrumbs[1].filters = [];
                     }
                     break;
                 case "Sort Columns":
@@ -285,6 +303,9 @@ async function filterMenu(arg_table){
         message: "How would you like to filter the data?",
         choices: ["=", ">=", "<=", ">", "<"],
         prefix: "",
+        when: function(arg_answers){
+            return arg_answers.column === "Revert" ? false : true;
+        }
     },{
         type: "input",
         name: "value",
@@ -508,13 +529,6 @@ async function updateDataIds(arg_data, arg_refs){
     return return_data;
 }
 
-/** @todo Implement and utilize */
-function displaySearchQuery(arg_query){
-    return JSON.stringify(arg_query);
-}
-
-
-
 // ==============================================================================
 // UPDATE INFORMATION METHODS
 // ==============================================================================
@@ -607,7 +621,28 @@ const objectQuestions = {
     add: {
         department: [{type: "input", name: "name", message: "Give the department a name: ", prefix: ""},
                      {type: "number", name: "budget", message: "Assign a budget to the new department: ", prefix: ""},
-                     {type: "list", name: "head_id", message: "Assign a department head: ", prefix: "", choices: ["PLACEHOLDER"], filter: function(arg_input){ return arg_input.match(/\d+(?=\s--)/g); }}],
+                     {type: "list", name: "head_id", message: "Assign a department head: ", prefix: "", choices: ["PLACEHOLDER"], filter: function(arg_input){ return arg_input.match(/\d+(?=\s--)/g); }},
+                     {type: "list", name: "new members", message: "Select unassigned employees to add to the department: ", prefix: "", choices: function(arg_hash){
+                        return new Promise((arg_resolve) => {
+                            queryDB("SELECT id, first_name, last_name FROM employee_table WHERE department_id = 0 OR department_id = NULL").then((arg_response) => {
+                                arg_resolve(arg_response.map(arg_value => arg_value.id + " -- " + arg_value.first_name + " " + arg_value.last_name));
+                            }
+                        );});
+                     }
+                    , filter: function(arg_input){
+                        return arg_input.match(/\d+(?=\s--)/g);
+                     }, when: function(arg_input){
+                        return new Promise((arg_resolve) => {
+                            queryDB("SELECT id, first_name, last_name FROM employee_table WHERE department_id = 0 OR department_id = NULL").then((arg_response) => {
+                                if(arg_response.length > 0){
+                                    arg_resolve(true);
+                                }
+                                else{
+                                    arg_resolve(false);
+                                }
+                            });
+                        });
+                     }}],
         employee: [{type: "input", name: "name", message: "Enter the employee's name: ", prefix: ""},
                    {type: "list", name: "department_id", message: "Which department does this employee work in?", prefix: "", choices: ["PLACEHOLDER"]},
                    {type: "list", name: "role_id", message: "What role does the employee perform?", prefix: "", choices: ["PLACEHOLDER"]},
@@ -963,6 +998,10 @@ async function updateObject(arg_category){
     t_query = t_query.replace(/\,\s(?=\sWHERE)/g, "");
 
     await queryDB(t_query);
+
+    if(t_category === "department"){
+        await queryDB("CALL update_department_expenses();");
+    }
 }
 
 async function deleteObject(arg_category){
@@ -1003,10 +1042,82 @@ function processInputForQuery(arg_value, arg_field){
 
 /** Rules for updateDatabaseIssues to check against the database */
 const databaseRules = [
+    // RULE 1 -- Employee's must have managers from the same department
+    { returnData: [], requirementData: "Employee", validator: function(arg_employeeData){
 
+        // For each employee
+        for(let t_emp of arg_employeeData){
+
+            // If employee's department doesn't match their manager's department
+            if(t_emp["department_id"] != t_emp["manager_department_id"] && t_emp != undefined){
+                this.returnData.push(t_emp);
+            }
+        }
+    },  message: function(arg_employee){
+        let return_string = "WARNING".warningText + ` The following employees have a manager from a different department: `;
+        for(let t_emp of this.returnData){
+            return_string += `\n${t_emp.id} -- ${t_emp.first_name} ${t_emp.last_name}`;
+        }
+
+        return return_string;
+    }},
+    // RULE 2 -- Department heads must belong to their department
+    { returnData: [], requirementData: "Department", validator: function(arg_departmentData){
+        // For each employee
+        for(let t_dept of arg_departmentData){
+
+            // If employee's department doesn't match their manager's department
+            if(t_dept["id"] != t_dept["head_department_id"] && t_dept != undefined){
+                this.returnData.push(t_dept);
+            }
+        }
+    },  message: function(){
+        let return_string = "WARNING".warningText + ` The following departments have a head from a different department: `;
+        
+        for(let t_dept of this.returnData){
+            return_string += `\n${t_dept.id} -- ${t_dept.name}`;
+        }
+
+        return return_string;
+    }}
 ];
 
 /**  */
 async function updateDatabaseIssues(){
+    // Get database data
+    let t_employeeData = await queryDB(`SELECT emp.*, emp2.department_id AS "manager_department_id" FROM employee_table AS emp LEFT JOIN employee_table AS emp2 ON emp.manager_id = emp2.id;`);
+    let t_departmentData = await queryDB(`SELECT dept.*, emp.department_id AS "head_department_id" FROM department_table AS dept LEFT JOIN employee_table AS emp ON dept.head_id = emp.id;`);
+    
+    // Helper variables
+    let t_flag = false;
+    let return_string = "";
 
+    // For each rule
+    for(let i = 0; i < databaseRules.length; i++){
+        switch(databaseRules[i].requirementData){
+            case "Department":
+                databaseRules[i].validator(t_departmentData);
+                break;
+            case "Role":
+                console.log("You should not be here");
+                break;
+            case "Employee":
+                databaseRules[i].validator(t_employeeData);
+                break;
+        }
+        
+        // If the database found violations
+        if(databaseRules[i].returnData.length > 0){
+            t_flag = true;
+            return_string += "\n" +  databaseRules[i].message();
+        }
+    }
+
+    if(t_flag){
+        return return_string;
+    }
+    else{
+        return "No database inconsistencies found."
+    }
 }
+

@@ -6,8 +6,9 @@ USE employee_tracker_db;
 CREATE TABLE department_table(
 id INT auto_increment,
 `name` VARCHAR(255),
-budget DECIMAL,
 head_id INT,
+budget DECIMAL,
+expenses DECIMAL,
 PRIMARY KEY(id)
 );
 
@@ -34,3 +35,27 @@ FOREIGN KEY(head_id)
 REFERENCES employee_table(id) 
 ON UPDATE CASCADE 
 ON DELETE SET NULL;
+
+DELIMITER //
+
+CREATE PROCEDURE update_department_expenses()
+BEGIN
+	UPDATE department_table SET expenses = get_department_expenses(id) WHERE id > 0;
+END //
+
+CREATE FUNCTION get_department_expenses(arg_dept INT) RETURNS DECIMAL DETERMINISTIC
+BEGIN
+	DECLARE exp DECIMAL;
+    -- Assign the sum of the salaries into the dept value --
+    SELECT SUM(r.salary) INTO exp FROM employee_table AS emp LEFT JOIN role_table AS r ON emp.role_id = r.id WHERE emp.department_id = arg_dept;
+    -- Update the value in department_table --
+    RETURN exp;
+END//
+
+CREATE FUNCTION validate_managers_departments() RETURNS BOOL DETERMINISTIC
+BEGIN
+	
+END//
+DELIMITER ;
+
+
