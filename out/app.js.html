@@ -1,4 +1,32 @@
-// Dependencies
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: app.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: app.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>// Dependencies
 const mysql = require("mysql");
 const fs = require("fs");
 const inquirer = require("inquirer");
@@ -17,11 +45,7 @@ colors.setTheme({
     tableNames: ["brightCyan", "bold"],
     tableRowBG: [],
     deleteText: ["red"],
-    warningText: ["yellow", "bold"],
-    errorText: ["red", "bold"],
-    budgetText_Green: ["green"],
-    budgetText_Yellow: ["yellow"],
-    budgetText_Red: ["brightRed"]
+    warningText: ["yellow", "bold"]
 });
 const employeeColumns = ["manager_id", "head_id"];
 
@@ -162,34 +186,34 @@ async function viewInformationMenu(){
         let t_message;
 
         // If the user wants to view data, display it
-        if(t_running && t_breadcrumbs.length > 0){
+        if(t_running &amp;&amp; t_breadcrumbs.length > 0){
             let t_query = "SELECT ";
 
             // Add parameters to query
             if(t_breadcrumbs.length === 2){
 
                 // Columns parameter
-                t_query += (t_breadcrumbs[1]["columns"] && t_breadcrumbs[1]["columns"].length > 0) ? t_breadcrumbs[1].columns : "*";
+                t_query += (t_breadcrumbs[1]["columns"] &amp;&amp; t_breadcrumbs[1]["columns"].length > 0) ? t_breadcrumbs[1].columns : "*";
 
                 // Table parameter
                 t_query += " FROM " + t_breadcrumbs[0];
 
                 // Filter criteria
-                if(t_breadcrumbs[1]["filters"] && t_breadcrumbs[1]["filters"].length > 0 ){
+                if(t_breadcrumbs[1]["filters"] &amp;&amp; t_breadcrumbs[1]["filters"].length > 0 ){
                     t_query += " WHERE ";
-                    for(let i = 0; i < t_breadcrumbs[1]["filters"].length; i++){
+                    for(let i = 0; i &lt; t_breadcrumbs[1]["filters"].length; i++){
                         t_query += `${t_breadcrumbs[1].filters[i].column} ${t_breadcrumbs[1].filters[i].operation} "${t_breadcrumbs[1].filters[i].value}" `;
                         if(i != t_breadcrumbs[1]["filters"].length - 1){ t_query += " AND "; }
                     }
                 }
 
                 // Group criteria
-                if(t_breadcrumbs[1]["Groups"] && t_breadcrumbs[1]["Groups"].length > 0){
+                if(t_breadcrumbs[1]["Groups"] &amp;&amp; t_breadcrumbs[1]["Groups"].length > 0){
                     t_query += " GROUP BY "     
                 }
 
                 // Sort critera
-                if(t_breadcrumbs[1]["sort"] && t_breadcrumbs[1]["sort"] != {}){
+                if(t_breadcrumbs[1]["sort"] &amp;&amp; t_breadcrumbs[1]["sort"] != {}){
                     t_query += ` ORDER BY ${t_breadcrumbs[1]["sort"].column} ${t_breadcrumbs[1]["sort"].direction}`;
                 }
             }
@@ -257,20 +281,20 @@ async function viewInformationMenu(){
             switch(t_view.method){
                 case "Filter Rows":
                     if(!t_breadcrumbs[1].filters){ t_breadcrumbs[1].filters = []; }
-                    t_breadcrumbs[1].filters.push(await filterMenu(t_breadcrumbs[0], t_breadcrumbs[1].columns));
+                    t_breadcrumbs[1].filters.push(await filterMenu(t_breadcrumbs[0]));
                     if(t_breadcrumbs[1].filters.find( (arg_value) => arg_value.column == "Revert")){
                         t_breadcrumbs[1].filters = [];
                     }
                     break;
                 case "Sort Columns":
-                    t_breadcrumbs[1].sort = await sortMenu(t_breadcrumbs[0], t_breadcrumbs[1].columns);
+                    t_breadcrumbs[1].sort = await sortMenu(t_breadcrumbs[0]);
                     break;
                 case "Search Rows":
                     // Get search criteria
-                    let t_search = await searchMenu(t_breadcrumbs[0], t_breadcrumbs[1].columns);
+                    let t_search = await searchMenu(t_breadcrumbs[0]);
 
                     // If a search exists modify it
-                    if(t_breadcrumbs[1].filters && t_breadcrumbs[1].filters.find((arg_value) => arg_value.operation === "REGEXP")){
+                    if(t_breadcrumbs[1].filters &amp;&amp; t_breadcrumbs[1].filters.find((arg_value) => arg_value.operation === "REGEXP")){
                         t_breadcrumbs[1].filters = t_breadcrumbs[1].filters.map((arg_value) => {
                             // Only affect the search filter
                             if(arg_value.operation === "REGEXP"){
@@ -283,7 +307,7 @@ async function viewInformationMenu(){
                     }
                     break;
                 case "Select Visible Columns":
-                    let t_columns = await columnsMenu(t_breadcrumbs[0], t_breadcrumbs[1].columns);
+                    let t_columns = await columnsMenu(t_breadcrumbs[0]);
                     t_breadcrumbs[1].columns = t_columns.join(", ");
                     break; 
                 case "Remove a Criteria":
@@ -303,11 +327,10 @@ async function viewInformationMenu(){
  * @description Prompts the user with visible available columns as set by {@link columnsMenu}, where "Revert" will clear the filter. Then upon selection of a column, the user is prompted for an operation and a value to be
  * passed to {@link viewInformationMenu} to assemble into the query.
 */
-async function filterMenu(arg_table, arg_columns){
+async function filterMenu(arg_table){
     // Get table fields
     let t_response = await queryDB("SHOW COLUMNS FROM ??;", [arg_table]);
     let t_tableColumns = t_response.map((arg_value) => arg_value.Field);
-    if(arg_columns && arg_columns.length > 0){ t_tableColumns = t_tableColumns.filter( arg_value => arg_columns.includes(arg_value)); }
     t_tableColumns.push(new inquirer.Separator(), "Revert");
 
     // Get user selection for columm, operation, and value
@@ -322,7 +345,7 @@ async function filterMenu(arg_table, arg_columns){
         type: "list",
         name: "operation",
         message: "How would you like to filter the data?",
-        choices: ["=", ">=", "<=", ">", "<"],
+        choices: ["=", ">=", "&lt;=", ">", "&lt;"],
         prefix: "",
         when: function(arg_answers){
             return arg_answers.column === "Revert" ? false : true;
@@ -344,7 +367,7 @@ async function filterMenu(arg_table, arg_columns){
                 t_regex = /[0-9]+/gi;
             }
 
-            if(arg_input.match(t_regex) != null && arg_input === arg_input.match(t_regex)[0]){
+            if(arg_input.match(t_regex) != null &amp;&amp; arg_input === arg_input.match(t_regex)[0]){
                 return true;
             }
             else{
@@ -357,18 +380,10 @@ async function filterMenu(arg_table, arg_columns){
     }]);
 }
 
-/** 
- * @async
- * @function searchMenu
- * @param {String} arg_table Name of a table from the database in the format `tableName`_table
- * @description Prompts the user with visible available columns as set by {@link columnsMenu}, then performs a regex search on the column based on the user's input.
- * @todo Implement input validation
-*/
-async function searchMenu(arg_table, arg_columns){
+async function searchMenu(arg_table){
     // Get table fields
     let t_response = await queryDB("SHOW COLUMNS FROM ??;", [arg_table]);
     let t_tableColumns = t_response.map((arg_value) => arg_value.Field);
-    if(arg_columns && arg_columns.length > 0){ t_tableColumns = t_tableColumns.filter( arg_value => arg_columns.includes(arg_value)); }
 
     // Get user input
     let return_keyword = await prompt([{
@@ -387,15 +402,12 @@ async function searchMenu(arg_table, arg_columns){
         name: "value",
         message: "Enter a keyword to search",
         prefix: "",
-        validate: function(arg_input, arg_hash){
-            if(arg_input.match(/[a-z\s]/i) && ["name","first_name","last_name","title"].includes(arg_hash.column)){
+        validate: function(arg_input){
+            if(arg_input.match(/[a-z\s]/i)){
                 return true;
-            }
-            else if(["name","first_name","last_name","title"].includes(arg_hash.column)){
-                return "Entry must be a string";
             }
             else{
-                return true;
+                return "Entry must be a string";
             }
         }
     }]);
@@ -406,17 +418,10 @@ async function searchMenu(arg_table, arg_columns){
     return return_keyword;
 }
 
-/** 
- * @async
- * @function sortMenu
- * @param {String} arg_table Name of a table from the database in the format `tableName`_table
- * @description Prompts the user with visible available columns as set by {@link columnsMenu},
-*/
-async function sortMenu(arg_table, arg_columns){
+async function sortMenu(arg_table){
     // Get table fields
     let t_response = await queryDB("SHOW COLUMNS FROM ??;", [arg_table]);
     let t_tableColumns = t_response.map((arg_value) => arg_value.Field);
-    if(arg_columns && arg_columns.length > 0){t_tableColumns = t_tableColumns.filter( arg_value => arg_columns.includes(arg_value)); }
 
     // Get user input
     let return_sort = await prompt([{
@@ -439,12 +444,7 @@ async function sortMenu(arg_table, arg_columns){
     return return_sort;
 }
 
-/**
- * @async
- * @function columnsMenu
- * @param {String} arg_table Name of a table from the database in the format `tableName`_table
-*/
-async function columnsMenu(arg_table, arg_columns){
+async function columnsMenu(arg_table){
     // Get table fields
     let t_response = await queryDB("SHOW COLUMNS FROM ??;", [arg_table]);
     let t_tableColumns = t_response.map((arg_value) => arg_value.Field);
@@ -455,7 +455,6 @@ async function columnsMenu(arg_table, arg_columns){
         name: "checks",
         message: "Which columns would you like to view",
         choices: t_tableColumns,
-        default: arg_columns,
         prefix: ""
     });
 
@@ -468,7 +467,7 @@ async function columnsMenu(arg_table, arg_columns){
 // ==============================================================================
 // DISPLAY METHODS
 // ==============================================================================
-/** */
+
 async function displayTable(arg_data, arg_tableName){
     // Query to return all foreign keys in the table
     let t_query = `SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS 
@@ -496,7 +495,7 @@ async function displayTable(arg_data, arg_tableName){
     return tableRenderer(t_data);
 }
 
-/** */
+/** Replace id references in the data and supplied fields with their database values */
 async function updateDataIds(arg_data, arg_refs){
     // Init helper variables
     let return_data = Array.from(arg_data);
@@ -533,7 +532,7 @@ async function updateDataIds(arg_data, arg_refs){
     }
 
     // For each row
-    for(let i = 0; i < arg_data.length; i++){
+    for(let i = 0; i &lt; arg_data.length; i++){
         // For each cell to replace
         for(let t_key of arg_refs){
 
@@ -576,7 +575,6 @@ async function updateDataIds(arg_data, arg_refs){
 // ==============================================================================
 // UPDATE INFORMATION METHODS
 // ==============================================================================
-/** */
 async function updateMenu(){
 
     // Initialize helper variables
@@ -617,7 +615,7 @@ async function updateMenu(){
 
 // CATEGORY NAVIGATION
 // ----------------------------------------------------------------------------
-/** */
+
 async function updateTableMenu(arg_table){
     console.clear();
 
@@ -630,11 +628,10 @@ async function updateTableMenu(arg_table){
         let t_message = await displayTable(t_data, `${arg_table}_table`);
 
         // Get user input on category selection
-        console.log(t_message);
         let t_input = await prompt({
             type: "list",
             name: "choice",
-            message: "How would you like to modify this data?",
+            message: t_message + "How would you like to modify this data?",
             choices: ["Create New Entry", "Update Existing Entry", "Delete Existing Entry", "Select a Different Category"],
             prefix: ""
         });
@@ -733,7 +730,7 @@ const objectQuestions = {
                          if(arg_input === 0){
                             return "Cannot designate a department's budget as zero";
                          }
-                         else if(arg_input < 0){
+                         else if(arg_input &lt; 0){
                             return "Budget cannot be a negative number";
                          }
                          else{
@@ -831,7 +828,7 @@ const objectQuestions = {
                             }
                         }},
                    {type: "list", name: "manager_id", message: "Select a manager for the employee: ", prefix: "", filter: function(arg_input){ // Question -- select a manager_id
-                            return arg_input === "Leave Empty" ? 0 : arg_input.match(/\d+(?=\s--)/g);
+                            return arg_input.match(/\d+(?=\s--)/g);
                         }, choices: function(arg_hash){
                             return new Promise( arg_resolve => {
                                 // Find the deparment id
@@ -841,13 +838,12 @@ const objectQuestions = {
                                         t_deparmentId = arg_hash.department_id;
                                     }
                                     else{
-                                        t_deparmentId = arg_response2[0].department_id;
+                                        t_deparmentId = arg_response2;
                                     }
 
                                     // Get possible managers
                                     queryDB("SELECT id, first_name, last_name FROM employee_table WHERE department_id = " + t_deparmentId + ";").then(arg_response => {
                                         let t_array = arg_response.map(arg_value => arg_value.id + " -- " + arg_value.first_name + " " + arg_value.last_name);
-                                        t_array.push("Leave Empty");
                                         if(t_array == undefined || t_array.length === 0){
                                             t_array = ["No Valid Managers Found"];
                                         }
@@ -962,7 +958,6 @@ const objectQuestions = {
     }
 }
 
-/** */
 async function addObject(arg_category){
     let t_questions = objectQuestions.add[arg_category];
 
@@ -1004,11 +999,6 @@ async function addObject(arg_category){
         t_values += processInputForQuery(t_info[t_key], t_key) + ", ";
     }
 
-    // Return out user selects no features
-    if(t_input.features.length === 0){
-        return;
-    }
-
     // Format the strings
     t_columns = t_columns.replace(/,\s$/g,""); t_values = t_values.replace(/,\s$/g, "");
     t_columns += ")"; t_values += ");";
@@ -1016,10 +1006,8 @@ async function addObject(arg_category){
     
     // Perform the query
     await queryDB(t_query);
-    await queryDB("CALL update_department_expenses();");
 }
 
-/** */
 async function updateObject(arg_category){
     let t_questions = objectQuestions.update;
 
@@ -1037,16 +1025,11 @@ async function updateObject(arg_category){
         break;
     }
 
-    // Return out user selects no features
-    if(t_input.features.length === 0){
-        return;
-    }
-
     // Generate update query
     let t_query = "UPDATE " + arg_category + "_table SET ";
     for(let t_feature of t_input.features){
         // Split up employee names into 2 parts
-        if(arg_category === "employee" && t_feature === "name"){
+        if(arg_category === "employee" &amp;&amp; t_feature === "name"){
             let t_data = t_input[t_feature].split(" ");
             t_query += `first_name = "${t_data[0]}", last_name = "${t_data[1]}", `;
         }
@@ -1058,10 +1041,12 @@ async function updateObject(arg_category){
     t_query = t_query.replace(/\,\s(?=\sWHERE)/g, "");
 
     await queryDB(t_query);
-    await queryDB("CALL update_department_expenses();");
+
+    if(t_category === "department"){
+        await queryDB("CALL update_department_expenses();");
+    }
 }
 
-/** */
 async function deleteObject(arg_category){
     let t_questions = objectQuestions.delete;
 
@@ -1079,19 +1064,12 @@ async function deleteObject(arg_category){
         break;
     }
 
-    // Return out user selects no features
-    if(t_input.features.length === 0){
-        return;
-    }
-
     // Generate update query
     let t_query = "DELETE FROM " + arg_category + "_table WHERE id = " + t_input.id + ";";
 
     await queryDB(t_query);
-    await queryDB("CALL update_department_expenses();");
 }
 
-/** */
 function processInputForQuery(arg_value, arg_field){
     let t_stringFields = ["name", "title", "first_name", "last_name"];
     if(t_stringFields.includes(arg_field)){
@@ -1114,7 +1092,7 @@ const databaseRules = [
         for(let t_emp of arg_employeeData){
 
             // If employee's department doesn't match their manager's department
-            if(t_emp["department_id"] != t_emp["manager_department_id"] && t_emp != undefined){
+            if(t_emp["department_id"] != t_emp["manager_department_id"] &amp;&amp; t_emp != undefined){
                 this.returnData.push(t_emp);
             }
         }
@@ -1132,7 +1110,7 @@ const databaseRules = [
         for(let t_dept of arg_departmentData){
 
             // If employee's department doesn't match their manager's department
-            if(t_dept["id"] != t_dept["head_department_id"] && t_dept != undefined){
+            if(t_dept["id"] != t_dept["head_department_id"] &amp;&amp; t_dept != undefined){
                 this.returnData.push(t_dept);
             }
         }
@@ -1144,37 +1122,7 @@ const databaseRules = [
         }
 
         return return_string;
-    }},
-    // RULE 3 -- Departments cannot have null budgets
-    { returnData: [], requirementData: "Department", validator: function(arg_departmentData){
-            for(let t_dept of arg_departmentData){
-                if(t_dept["budget"] === undefined || t_dept["budget"] === null || t_dept["budget"] === "" || t_dept["budget"] === 0 ){
-                    this.returnData.push(t_dept);
-                }
-            }
-        }, message: function(){
-            let return_string = "ERROR".errorText + " The following departments do not have a budget: \n";
-            for(let i = 0; i < this.returnData.length; i++){
-                return_string += this.returnData[i].id + " -- " + this.returnData[i].name + "\n";
-            }
-            return return_string;
-        }
-    },
-    // RULE 4 -- Roles must have salaries
-    { returnData: [], requirementData: "Role", validator: function(arg_roleData){
-            for(let t_role of arg_roleData){
-                if(t_role["salary"] === undefined || t_role["salary"] === null || t_role["salary"] === "" || t_role["salary"] === 0 ){
-                    this.returnData.push(t_role);
-                }
-            }
-        }, message: function(){
-            let return_string = "ERROR".errorText + " The following roles do not have a salary: \n";
-            for(let i = 0; i < this.returnData.length; i++){
-                return_string += this.returnData[i].id + " -- " + this.returnData[i].title;
-            }
-            return return_string;
-        }
-    }
+    }}
 ];
 
 
@@ -1182,20 +1130,19 @@ async function updateDatabaseIssues(){
     // Get database data
     let t_employeeData = await queryDB(`SELECT emp.*, emp2.department_id AS "manager_department_id" FROM employee_table AS emp LEFT JOIN employee_table AS emp2 ON emp.manager_id = emp2.id;`);
     let t_departmentData = await queryDB(`SELECT dept.*, emp.department_id AS "head_department_id" FROM department_table AS dept LEFT JOIN employee_table AS emp ON dept.head_id = emp.id;`);
-    let t_roleData = await queryDB(`SELECT * FROM role_table;`);
     
     // Helper variables
     let t_flag = false;
     let return_string = "";
 
     // For each rule
-    for(let i = 0; i < databaseRules.length; i++){
+    for(let i = 0; i &lt; databaseRules.length; i++){
         switch(databaseRules[i].requirementData){
             case "Department":
                 databaseRules[i].validator(t_departmentData);
                 break;
             case "Role":
-                databaseRules[i].validator(t_roleData);
+                console.log("You should not be here");
                 break;
             case "Employee":
                 databaseRules[i].validator(t_employeeData);
@@ -1217,3 +1164,26 @@ async function updateDatabaseIssues(){
     }
 }
 
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#app">app</a></li><li><a href="global.html#databaseRules">databaseRules</a></li><li><a href="global.html#filterMenu">filterMenu</a></li><li><a href="global.html#mainMenu">mainMenu</a></li><li><a href="global.html#objectQuestions">objectQuestions</a></li><li><a href="global.html#prompt">prompt</a></li><li><a href="global.html#updateDataIds">updateDataIds</a></li><li><a href="global.html#viewInformationMenu">viewInformationMenu</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.5</a> on Fri Sep 04 2020 14:31:57 GMT-0400 (Eastern Daylight Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
