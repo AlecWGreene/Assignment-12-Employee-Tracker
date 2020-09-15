@@ -69,7 +69,7 @@ VALUES
 ("Jebediah","Lyson",5,7,1),
 ("Chanice","Tyson",6,8,1),
 ("Omar","Al-Saud",5,9,1),
-("North","West",7,11,1),
+("North","West",8,11,1),
 ("Terry","Haymond",5,7,1),
 ("Cruella","Devil", 2,4,1),
 ("Chiron","Kaustus", 5,4,1);

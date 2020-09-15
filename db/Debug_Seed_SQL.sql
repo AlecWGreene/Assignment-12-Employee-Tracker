@@ -52,6 +52,17 @@ BEGIN
     RETURN exp;
 END//
 
+-- Sets the manager of all employees in the department to the current department head --
+CREATE PROCEDURE reset_department_managers(IN arg_dept INT)
+BEGIN
+    -- Get the head_id from department table --
+	DECLARE head INT;
+    SELECT head_id INTO head FROM department_table WHERE id = arg_dept;
+    
+    -- Set the manager of the department employees to head_id and the head of the department's manager to null --
+	UPDATE employee_table SET manager_id = head WHERE department_id = arg_dept; 
+    UPDATE employee_table SET manager_id = NULL WHERE id = head;
+END //
 DELIMITER ;
 
 

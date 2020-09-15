@@ -690,8 +690,8 @@ const objectQuestions = {
                         });
                      }}],
         employee: [{type: "input", name: "name", message: "Enter the employee's name: ", prefix: ""},
-                   {type: "list", name: "department_id", message: "Which department does this employee work in?", prefix: "", choices: ["PLACEHOLDER"]},
-                   {type: "list", name: "role_id", message: "What role does the employee perform?", prefix: "", choices: ["PLACEHOLDER"]},
+                   {type: "list", name: "department_id", message: "Which department does this employee work in?", prefix: "", choices: ["PLACEHOLDER"], filter: function(arg_input){ return arg_input.match(/\d+(?=\s--)/g); }},
+                   {type: "list", name: "role_id", message: "What role does the employee perform?", prefix: "", choices: ["PLACEHOLDER"], filter: function(arg_input){ return arg_input.match(/\d+(?=\s--)/g); }},
                    {type: "list", name: "manager_id", message: "Who is the employee's manager?", prefix: "", choices: ["PLACEHOLDER"], filter: function(arg_input){ return arg_input.match(/\d+(?=\s--)/g); }}],
         role: [{type: "input", name: "title", message: "Enter the role's title: ", prefix: ""},
                {type: "number", name: "salary", message: "Assign a salary to the role: ", prefix: ""}]
@@ -717,9 +717,11 @@ const objectQuestions = {
                                         return "budget";
                                     case "Department Head":
                                         return "head_id";
+                                    case "Reset Employee Managers":
+                                        return "reset_managers";
                                 }
                             });
-                        }, choices: ["Name", "Budget", "Department Head"]},
+                        }, choices: ["Name", "Budget", "Department Head", "Reset Employee Managers"]},
                      {type: "input", name: "name", message: "Update the department name: ", prefix: "", filter: function(arg_input){ // Question -- enter new department name
                         return arg_input.toLowerCase().replace(/\b\w/g, arg_char => arg_char.toUpperCase());
                      }, when: function(arg_input){
@@ -766,7 +768,10 @@ const objectQuestions = {
                         }
 
                         return false;
-                    }}],
+                    }},{type: "confirm", name: "reset", message: "Confirm resetting all employee's manager to the current department head?", prefix: "", when: function(arg_hash){
+                        return arg_hash.features.includes("reset_managers");
+                    }
+                    }],
         employee: [{type: "list", name: "id", message: "Which employee would you like to update?", prefix: "", choices: function(){ // Question -- select an employee
                             return new Promise( arg_resolve => {
                                 queryDB("SELECT id, first_name, last_name FROM employee_table").then(arg_response => {
@@ -976,12 +981,12 @@ async function addObject(arg_category){
         case "employee":
             // Get valid list of departments
             let t_data = await queryDB("SELECT id, name FROM department_table");
-            t_questions[1].choices = t_data.map( arg_value => arg_value.name);
+            t_questions[1].choices = t_data.map( arg_value => arg_value.id + " -- " + arg_value.name);
             t_questions[1].choices.push("Leave Empty");
 
             // Get valid list of roles
             t_data = await queryDB("SELECT id, title FROM role_table");
-            t_questions[2].choices = t_data.map( arg_value => arg_value.title);
+            t_questions[2].choices = t_data.map( arg_value => arg_value.id + " -- " + arg_value.title);
             t_questions[2].choices.push("Leave Empty");
 
             // Get employees to select as manager
@@ -994,19 +999,14 @@ async function addObject(arg_category){
     }
 
     // Get object information
-    let t_info = await prompt(t_questions);
+    let t_input = await prompt(t_questions);
     
     // Insert a new row into the relevant table
     let t_query = `INSERT INTO ${arg_category}_table` ;
     let t_columns = "(", t_values = " VALUES (";
-    for(let t_key of Object.keys(t_info)){
+    for(let t_key of Object.keys(t_input)){
         t_columns += t_key + ", ";
-        t_values += processInputForQuery(t_info[t_key], t_key) + ", ";
-    }
-
-    // Return out user selects no features
-    if(t_input.features.length === 0){
-        return;
+        t_values += processInputForQuery(t_input[t_key], t_key) + ", ";
     }
 
     // Format the strings
@@ -1041,24 +1041,38 @@ async function updateObject(arg_category){
     if(t_input.features.length === 0){
         return;
     }
+    // If there are features besides reset_managers
+    else if(t_input.features.length > 1 || !t_input.features.includes("reset_managers")){
+        // Generate update query
+        let t_query = "UPDATE " + arg_category + "_table SET ";
 
-    // Generate update query
-    let t_query = "UPDATE " + arg_category + "_table SET ";
-    for(let t_feature of t_input.features){
-        // Split up employee names into 2 parts
-        if(arg_category === "employee" && t_feature === "name"){
-            let t_data = t_input[t_feature].split(" ");
-            t_query += `first_name = "${t_data[0]}", last_name = "${t_data[1]}", `;
+        for(let t_feature of t_input.features){
+            // Split up employee names into 2 parts
+            if(arg_category === "employee" && t_feature === "name"){
+                let t_data = t_input[t_feature].split(" ");
+                t_query += `first_name = "${t_data[0]}", last_name = "${t_data[1]}", `;
+            }
+            // Skip reset_managers
+            else if(t_feature === "reset_managers"){ continue; }
+            // Add feature to query
+            else{
+                t_query += t_feature + " = " + processInputForQuery(t_input[t_feature], t_feature) + ", ";
+            }
         }
-        else{
-            t_query += t_feature + " = " + processInputForQuery(t_input[t_feature], t_feature) + ", ";
-        }
+
+        // Perform query
+        t_query += ` WHERE id = ${t_input.id};`;
+        t_query = t_query.replace(/\,\s(?=\sWHERE)/g, "");
+        await queryDB(t_query);
     }
-    t_query += ` WHERE id = ${t_input.id};`;
-    t_query = t_query.replace(/\,\s(?=\sWHERE)/g, "");
 
-    await queryDB(t_query);
+    
     await queryDB("CALL update_department_expenses();");
+
+    // Call procedure if reset_managers is requested
+    if(t_input.features.includes("reset_managers")){
+        await queryDB(`CALL reset_department_managers(${t_input.id})`);
+    }
 }
 
 /** */
@@ -1077,11 +1091,6 @@ async function deleteObject(arg_category){
     case "role":
         t_input = await prompt(t_questions.role);
         break;
-    }
-
-    // Return out user selects no features
-    if(t_input.features.length === 0){
-        return;
     }
 
     // Generate update query
@@ -1106,7 +1115,7 @@ function processInputForQuery(arg_value, arg_field){
 // -----------------------------------------------------------------------------
 
 /** Rules for updateDatabaseIssues to check against the database */
-const databaseRules = [
+let databaseRules = [
     // RULE 1 -- Employee's must have managers from the same department
     { returnData: [], requirementData: "Employee", validator: function(arg_employeeData){
 
@@ -1179,6 +1188,12 @@ const databaseRules = [
 
 
 async function updateDatabaseIssues(){
+    // Reset returnData for each rule
+    databaseRules = databaseRules.filter(arg_rule => {
+        arg_rule.returnData = [];
+        return arg_rule;
+    });
+
     // Get database data
     let t_employeeData = await queryDB(`SELECT emp.*, emp2.department_id AS "manager_department_id" FROM employee_table AS emp LEFT JOIN employee_table AS emp2 ON emp.manager_id = emp2.id;`);
     let t_departmentData = await queryDB(`SELECT dept.*, emp.department_id AS "head_department_id" FROM department_table AS dept LEFT JOIN employee_table AS emp ON dept.head_id = emp.id;`);

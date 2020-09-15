@@ -52,9 +52,11 @@ BEGIN
     RETURN exp;
 END//
 
-CREATE FUNCTION validate_managers_departments() RETURNS BOOL DETERMINISTIC
+CREATE PROCEDURE reset_department_managers(IN arg_id INT)
 BEGIN
-	
+	DECLARE managerIdRef INT;
+	SELECT head_id INTO managerIdRef FROM department_table WHERE id = arg_id;
+	UPDATE employee_table AS emp SET emp.manager_id = managerIdRef WHERE emp.department_id = arg_id;
 END//
 DELIMITER ;
 
